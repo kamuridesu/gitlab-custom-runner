@@ -1,0 +1,48 @@
+variables:
+    CI_REGISTRY_IMAGE: "kamuri/$CI_PROJECT_NAME"
+
+stages:
+    - image-build
+    - deploy
+
+build-image:
+    stage: image-build
+    tags:
+    - image-build
+    image:
+        name: moby/buildkit:master-rootless
+        entrypoint: [ "sh", "-c" ]
+    variables:
+        BUILDKITD_FLAGS: --oci-worker-no-process-sandbox
+    script: |
+        buidctl-daemonless.sh build \
+            --frontend=dockerfile.v0 \
+            --local context=${CI_PROJECT_DIR}/notasite \
+            --local dockerfile=${CI_PROJECT_DIR}/notasite
+            --output type=image,name=registry.kube.local/test,push=true,registry.insecure=true
+    rules:
+      - if: $CI_COMMIT_BRANCH
+        exists:
+          - Dockerfile
+
+deploy:
+    stage: deploy
+    tags:
+        - deploy
+    script:
+        - echo "Installing required tools"
+        - sudo apt-get install gettext-base cowsay git python3 -y
+        - cowsay "Setting up git"
+        - git config --global user.email "gitlab@example.com"
+        - git config --global user.name "Deploy Runner"
+        - cowsay "Cloning cd-files"
+        - git clone http://$GITLAB_USER:$GITLAB_PASSWORD@10.0.2.2/root/cd-files.git
+        - cowsay "Changing deployment"
+        - cd cd-files/gitlab-runners
+        - cowsay $(ls)
+        - |
+          for i in $(ls -d */); do python3 -c "[print([x, '        image: docker.io/${CI_REGISTRY_IMAGE}:$CI_COMMIT_SHORT_SHA'][x.strip().startswith('image')]) for x in '''$(cat $i/deployment.yaml)'''.split('\n')]" > $i/deployment.yaml; done
+        - git add .
+        - git commit -m "Add files for project $CI_PROJECT_NAME" && cowsay "Uploading" && git push origin main
+        - cowsay "All done"
+  
