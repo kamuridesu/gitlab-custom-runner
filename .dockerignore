@@ -1,3 +1,5 @@
 Dockerfile
 .dockerignore
 .gitlab-ci.yml
+*.toml
+test.sh
