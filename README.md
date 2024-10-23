@@ -1,6 +1,8 @@
 # Gitlab Custom Runner
-
 Custom runner for Gitlab runner to use it with Kubernetes
+
+## Note
+Deprecated, this doesn't work anymore.
 
 ## How it works
 
